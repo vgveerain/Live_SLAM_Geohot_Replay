@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 class Extractor(object):    
     def __init__(self):
-        self.orb = cv2.ORB_create(1000)
-        self.bf = cv2.BFMatcher()
+        self.orb = cv2.ORB_create()
+        self.bf = cv2.BFMatcher(cv2.NORM_HAMMING)
         self.last = None
 
     def extract(self, img):
@@ -15,9 +15,20 @@ class Extractor(object):
         kps, des = self.orb.compute(img, kps)
 
         # matching
-        matches = None
+        # matches = None
+        # if self.last is not None:
+        #     matches = self.bf.match(des, self.last["des"])
+        #     matches = zip([kps[m.queryIdx] for m in matches], [self.last["kps"][m.trainIdx] for m in matches])
+
+        ret = []
         if self.last is not None:
-            matches = self.bf.match(des, self.last["des"])
-            # print(matches)
+            matches = self.bf.knnMatch(des, self.last['des'], k=2)
+            for m,n in matches:
+                if m.distance < 0.75*n.distance:
+                    kp1 = kps[m.queryIdx]
+                    kp2 = self.last['kps'][m.trainIdx]
+                    ret.append((kp1, kp2))
+
+        #return    
         self.last = {"kps":kps, "des":des}
-        return kps, des, matches
+        return ret
