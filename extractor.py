@@ -2,11 +2,29 @@ import cv2
 import numpy as np
 from skimage.measure import ransac
 from skimage.transform import FundamentalMatrixTransform
+from skimage.transform import EssentialMatrixTransform
+
+def add_ones(x):
+    return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
+
 class Extractor(object):    
-    def __init__(self):
+    def __init__(self, K):
         self.orb = cv2.ORB_create()
         self.bf = cv2.BFMatcher(cv2.NORM_HAMMING)
         self.last = None
+        self.K = K
+        self.Kinv = np.linalg.inv(self.K)
+    
+    def normalize(self, pts):
+        return np.dot(self.Kinv, add_ones(pts).T).T[:, 0:2]
+
+    def denormalize(self, pt):
+        # return int(round(pt[0]+self.w//2)), int(round(pt[1]+self.h//2))
+        # return np.dot(self.Kinv, add_ones(pts).T).T[:, 0:2]
+        ret = np.dot(self.K, np.array([pt[0], pt[1], 1.0]))
+        # print(ret)
+        #ret /= ret[2]
+        return int(round(ret[0])), int(round(ret[1]))
 
     def extract(self, img):
         # detection
@@ -34,6 +52,14 @@ class Extractor(object):
         # filter
         if len(ret) > 0:
             ret = np.array(ret)
+
+            # normalize co-ordinates
+            # ret[:, :, 0] -= img.shape[0]//2
+            # ret[:, :, 1] -= img.shape[1]//2
+            ret[:, 0, :] = self.normalize(ret[:, 0, :])
+            # print(ret[:, 0, :])
+            ret[:, 1, :] = self.normalize(ret[:, 1, :])
+
             model, inliers = ransac((ret[:, 0], ret[:, 1]),
                                     FundamentalMatrixTransform,
                                     min_samples=8,
