@@ -3,7 +3,9 @@ from display import Display
 from extractor import Extractor
 import numpy as np
 
-F=1
+# F=1
+# F = 740
+F = 280
 
 W,H = 1920//2,1080//2
 disp = Display(W,H)
@@ -15,9 +17,13 @@ extractor = Extractor(K)
 def process_frame(img):
     img = cv2.resize(img, (W,H))
     # kps, des, matches = extractor.extract(img)
-    ret = extractor.extract(img)
+    # ret = matches
+    ret, pose = extractor.extract(img)
+    if pose is None:
+        return
 
     print("%d matches" % (len(ret)))
+    print(pose)
 
     if ret is None:
         return
